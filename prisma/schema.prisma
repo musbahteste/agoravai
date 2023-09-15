@@ -1,0 +1,264 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model credencial {
+  id            Int       @id @default(autoincrement())
+  situacao      Boolean   @default(true)
+  email         String    @unique @db.VarChar(250)
+  senha         String
+  prazo_licenca Int?      @default(7)
+  token         String?
+  create_at     DateTime  @default(now())
+  update_at     DateTime  @default(now()) @updatedAt
+  usuario       usuario[]
+}
+
+model usuario {
+  id                Int                 @id @default(autoincrement())
+  id_cred           Int                 @unique
+  situacao          Boolean             @default(true)
+  nome              String              @db.VarChar(250)
+  cpf_cnpj          String              @unique @db.VarChar(20)
+  telefone          String?             @db.VarChar(20)
+  endereco          String?             @db.VarChar(250)
+  num_endereco      String?             @db.VarChar(10)
+  complemento       String?
+  bairro            String?             @db.VarChar(100)
+  cidade            String?             @db.VarChar(60)
+  uf                String?             @db.Char(2)
+  cep               String?             @db.VarChar(9)
+  pais              String?             @db.VarChar(60)
+  latitude_casa     String?
+  longitude_casa    String?
+  latitude_pombal   String?
+  longitude_pombal  String?
+  create_at         DateTime            @default(now())
+  update_at         DateTime            @default(now()) @updatedAt
+  credencial        credencial          @relation(fields: [id_cred], references: [id])
+  herarquia         herarquia[]
+  socio_clube       socio_clube[]
+  pombo             pombo[]
+  clube             clube[]
+  provas            provas[]
+  provas_lancamento provas_lancamento[]
+  federacao         federacao[]
+  clube_campeonato  clube_campeonato[]
+  campeonato        campeonato[]
+  documentos        documentos[]
+}
+
+model herarquia {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int
+  perfil     perfil
+  create_at  DateTime @default(now())
+  update_at  DateTime @default(now()) @updatedAt
+  usuario    usuario  @relation(fields: [usuario_id], references: [id_cred])
+}
+
+model pombo {
+  id        Int       @id @default(autoincrement())
+  situacao  Boolean   @default(true)
+  anilha    String    @db.VarChar(50)
+  sexo      sexoPombo
+  cor       String    @db.VarChar(30)
+  dono      Int
+  usuario   usuario   @relation(fields: [dono], references: [id_cred])
+  create_at DateTime  @default(now())
+  update_at DateTime  @default(now()) @updatedAt
+
+  provas_lancamento provas_lancamento[]
+  clube_campeonato  clube_campeonato[]
+  provas_resultado  provas_resultado[]
+}
+
+model clube {
+  id                Int                @id @default(autoincrement())
+  situacao          Boolean            @default(true)
+  nome              String             @db.VarChar(100)
+  telefone          String?            @db.VarChar(20)
+  cidade            String             @db.VarChar(60)
+  uf                String             @db.Char(2)
+  pais              String             @db.VarChar(60)
+  federacao_id      Int
+  usuario_dirigente Int                @unique
+  usuario           usuario            @relation(fields: [usuario_dirigente], references: [id_cred])
+  federacao         federacao          @relation(fields: [federacao_id], references: [id])
+  create_at         DateTime           @default(now())
+  update_at         DateTime           @default(now()) @updatedAt
+  socio_clube       socio_clube[]
+  campeonato        campeonato[]
+  clube_campeonato  clube_campeonato[]
+  documentos        documentos[]
+}
+
+model socio_clube {
+  id        Int      @id @default(autoincrement())
+  usario_id Int
+  clube_id  Int
+  situacao  Boolean  @default(true)
+  create_at DateTime @default(now())
+  update_at DateTime @default(now()) @updatedAt
+  clube     clube    @relation(fields: [clube_id], references: [id])
+  usario    usuario  @relation(fields: [usario_id], references: [id_cred])
+}
+
+model federacao {
+  id         Int      @id @default(autoincrement())
+  nome       String   @db.VarChar(100)
+  situacao   Boolean  @default(true)
+  telefone   String?  @db.VarChar(20)
+  cidade     String   @db.VarChar(60)
+  uf         String   @db.Char(2)
+  pais       String   @db.VarChar(60)
+  presidente Int
+  create_at  DateTime @default(now())
+  update_at  DateTime @default(now()) @updatedAt
+  usuario    usuario  @relation(fields: [presidente], references: [id_cred])
+  clube      clube[]
+}
+
+model campeonato {
+  id               Int                @id @default(autoincrement())
+  situacao         Boolean            @default(true)
+  nome             String             @db.VarChar(250)
+  categoria        tipocampeonato
+  usuario_criador  Int
+  clube_id         Int
+  create_at        DateTime           @default(now())
+  update_at        DateTime           @default(now()) @updatedAt
+  usuario          usuario            @relation(fields: [usuario_criador], references: [id_cred])
+  clube            clube              @relation(fields: [clube_id], references: [id])
+  clube_campeonato clube_campeonato[]
+  provas           provas[]
+}
+
+model clube_campeonato {
+  id            Int        @id @default(autoincrement())
+  campeonato_id Int
+  socio_id      Int
+  clube_id      Int
+  prova_id      Int
+  pombo_id      Int
+  create_at     DateTime   @default(now())
+  update_at     DateTime   @default(now()) @updatedAt
+  clube         clube      @relation(fields: [clube_id], references: [id])
+  pombo         pombo      @relation(fields: [pombo_id], references: [id])
+  provas        provas     @relation(fields: [prova_id], references: [id])
+  campeonato    campeonato @relation(fields: [campeonato_id], references: [id])
+  socio         usuario    @relation(fields: [socio_id], references: [id])
+
+  @@unique([campeonato_id, clube_id, pombo_id, prova_id, socio_id])
+}
+
+model provas {
+  id                Int                 @id @default(autoincrement())
+  situacao          Boolean             @default(true)
+  campeonato_id     Int
+  campeonato        campeonato          @relation(fields: [campeonato_id], references: [id])
+  nome              String              @db.VarChar(100)
+  cidade            String              @db.VarChar(60)
+  uf                String              @db.Char(2)
+  pais              String              @db.VarChar(60)
+  data_hora_solta   DateTime?
+  latitude_solta    String?             @db.VarChar(100)
+  longitude_solta   String?             @db.VarChar(100)
+  prova_encerrada   Boolean             @default(false)
+  usuario_criacao   Int
+  usuario           usuario             @relation(fields: [usuario_criacao], references: [id_cred])
+  create_at         DateTime            @default(now())
+  update_at         DateTime            @default(now()) @updatedAt
+  provas_lancamento provas_lancamento[]
+  provas_resultado  provas_resultado[]
+  clube_campeonato  clube_campeonato[]
+  tempo_morto       tempo_morto[]
+}
+
+model provas_lancamento {
+  id                Int                @id @default(autoincrement())
+  prova_id          Int
+  pombo_id          Int
+  data_hora_chegada DateTime
+  latitude_chegada  String             @db.VarChar(100)
+  longitude_chegada String             @db.VarChar(100)
+  usuario_id        Int
+  create_at         DateTime           @default(now())
+  update_at         DateTime           @default(now()) @updatedAt
+  pombo             pombo              @relation(fields: [pombo_id], references: [id])
+  usuario           usuario            @relation(fields: [usuario_id], references: [id_cred])
+  prova             provas             @relation(fields: [prova_id], references: [id])
+  provas_resultado  provas_resultado[]
+
+  @@unique([prova_id, pombo_id])
+}
+
+model provas_resultado {
+  id                   Int               @id @default(autoincrement())
+  prova_id             Int
+  prova_lanc_id        Int
+  distancia_percorrida Float
+  tempo_prova          Float
+  velocidade_media     Float
+  pombo_id             Int
+  pts                  Int?              @default(0)
+  posicao              Int?
+  create_at            DateTime          @default(now())
+  update_at            DateTime          @default(now()) @updatedAt
+  prova_lancamento     provas_lancamento @relation(fields: [prova_lanc_id], references: [id])
+  prova                provas            @relation(fields: [prova_id], references: [id])
+  pombo                pombo             @relation(fields: [pombo_id], references: [id])
+}
+
+model tempo_morto {
+  id                 Int      @id @default(autoincrement())
+  tempo_morto_inicio DateTime
+  tempo_morto_final  DateTime
+  prova_id           Int
+  create_at          DateTime @default(now())
+  update_at          DateTime @default(now()) @updatedAt
+  prova              provas   @relation(fields: [prova_id], references: [id])
+}
+
+model documentos {
+  id             Int       @id @default(autoincrement())
+  descricao      String    @db.VarChar(300)
+  usuario_id     Int
+  clube_id       Int?
+  vencimento     DateTime?
+  vencido        Boolean   @default(false)
+  tipo_documento String?   @db.VarChar(250)
+  url            String
+  create_at      DateTime  @default(now())
+  update_at      DateTime  @default(now()) @updatedAt
+  usuario        usuario   @relation(fields: [usuario_id], references: [id_cred])
+  clube          clube?    @relation(fields: [clube_id], references: [id])
+
+}
+
+enum tipocampeonato {
+  Fundo
+  MeioFundo
+  Velocidade
+  Filhotes
+}
+
+enum perfil {
+  Socio
+  Dirigente
+  Admin
+}
+
+enum sexoPombo {
+  Femea
+  Macho
+  Filhote
+}
